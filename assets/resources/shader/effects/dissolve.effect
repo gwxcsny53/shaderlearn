@@ -1,0 +1,83 @@
+// Copyright (c) 2017-2020 Xiamen Yaji Software Co., Ltd.
+CCEffect %{
+techniques:
+  - passes:
+      - vert: sprite-vs:vert
+        frag: sprite-fs:frag
+        depthStencilState:
+          depthTest: false
+          depthWrite: false
+        blendState:
+          targets:
+            - blend: true
+              blendSrc: src_alpha
+              blendDst: one_minus_src_alpha
+              blendDstAlpha: one_minus_src_alpha
+        rasterizerState:
+          cullMode: none
+        properties:
+          alphaThreshold: { value: 0.5 }
+          dissolve: { value: white, editor: { tooltip: "噪声贴图" } }
+          dissolveThreshold:
+            {
+              value: 0.5,
+              editor: { range: [0, 1, 0.01], slide: true, tooltip: "溶解阈值" },
+            }
+          dissolveColor:
+            {
+              value: [0.6, 0.2, 0.1, 1],
+              editor: { tooltip: "溶解颜色", type: color },
+            }
+
+}%
+
+CCProgram sprite-vs %{
+#include "../chunks/normal-vert.chunk"
+}%
+
+CCProgram sprite-fs %{
+precision highp float;
+#include <builtin/internal/alpha-test>
+#include <builtin/internal/sprite-texture>
+in vec2 uv0;
+
+#if USE_LOCAL
+  in vec4 v_color;
+#endif
+
+#if USE_TEXTURE
+  uniform sampler2D dissolve;
+#endif
+
+uniform Dissolve {
+  vec4 dissolveColor;
+  float dissolveThreshold;
+};
+
+vec4 frag() {
+  vec4 o = vec4(1, 1, 1, 1);
+  
+  float value = 1.0;
+  #if USE_TEXTURE
+    vec4 dissolveMap = texture(dissolve, uv0);
+    value *= dissolveMap.r;
+  #endif
+  
+  if (value < dissolveThreshold) {
+    discard;
+  }
+  
+  o *= texture(cc_spriteTexture, uv0);
+  #if USE_LOCAL
+    o *= v_color;
+  #endif
+  
+  ALPHA_TEST(o);
+  
+  if (value < dissolveThreshold + 0.05) {
+    // o = vec4(0.6, 0.2, 0.1, o.a);                    
+    o = vec4(dissolveColor.rgb, o.a);
+  }
+  return o;
+}
+}%
