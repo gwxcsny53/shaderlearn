@@ -1,0 +1,141 @@
+/**
+ * 灰度滤镜
+ * @param color 输入颜色
+ * @return 灰度颜色
+ */
+vec4 graySacle(vec4 color) {
+    float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    return vec4(vec3(gray), color.a);
+}
+
+/**
+ * 反相滤镜
+ * @param color 输入颜色
+ * @return 反相颜色
+ */
+vec3 invert(vec3 color) {
+    return vec3(1.0 - color.rgb);
+}
+
+/**
+ * 像素化滤镜
+ * @param uv 输入纹理坐标
+ * @param pixelSize 像素大小
+ * @return 像素化颜色
+ */
+vec4 pixelate(vec2 uv, float pixelSize){
+    vec2 pixelCoord = floor(uv * pixelSize) / pixelSize;
+    return texture(cc_spriteTexture, pixelCoord);
+}
+
+/**
+ * 暗角滤镜
+ * @param uv 输入纹理坐标
+ * @param vignetteIntensity 暗角强度
+ * @return 暗角颜色
+ */
+float vignette(vec2 uv, float vignetteIntensity){
+
+    vec2 center = vec2(0.5,0.5);
+    float dist = distance(uv,center);
+
+    return  smoothstep(0.3,0.8,dist * vignetteIntensity);
+}
+
+/**
+ * 深褐色滤镜 老照片风格
+ * @param color 输入颜色
+ * @return 深褐色颜色
+ */
+vec4 sepia(vec4 color){
+    vec3 newColor;
+    newColor.r = dot(color.rgb, vec3(0.393, 0.769, 0.189));
+    newColor.g = dot(color.rgb, vec3(0.349, 0.686, 0.168));
+    newColor.b = dot(color.rgb, vec3(0.272, 0.534, 0.131));
+    return vec4(min(newColor, vec3(1.0)), color.a);
+}
+
+/**
+ * 赛博朋克滤镜
+ * @param color 输入颜色
+ * @return 赛博朋克颜色
+ */
+vec4 cyberpunk(vec4 color){
+    // 增强对比度
+    color.rgb = (color.rgb - 0.5) * 2.0 + 0.5;
+    
+    // 调整色调 增加红色和蓝色分量
+    float r = color.r * 1.2;
+    float g = color.g * 0.9;
+    float b = color.b * 1.5;
+    // 添加紫色偏移
+    r = min(r+color.b *0.2,1.0);
+    b = min(b+color.r *0.3,1.0);
+    
+    return vec4(r,g,b,color.a);
+}
+
+/**
+ * 双色滤镜
+ * @param color 输入颜色
+ * @return 双色颜色
+ */
+vec4 duotone(vec4 color){
+    vec3 darkColor = vec3(0.0,0.0,0.5);
+
+    vec3 lightColor = vec3(1.0,0.8,0.2);
+
+    float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    vec3 mixedColor = mix(darkColor,lightColor,luminance);
+    return vec4(mixedColor,color.a);
+}
+
+
+
+/**
+ * 胶片颗粒
+ * @param uv0 输入纹理坐标
+ * @param time 时间因子
+ * @return 胶片颗粒颜色
+ */
+float filmGrain(vec2 uv0,float time){
+    return fract(sin(dot(uv0 * time,vec2(12.9898,78.233)))*43758.5453);
+}
+
+/**
+ * 胶片褪色滤镜
+ * @param color 输入颜色
+ * @return 胶片褪色颜色
+ */
+vec3 filmFade(vec3 color){
+    vec3 fadeColor = vec3(0.15, 0.15, 0.05);   // 褪色颜色
+    return mix(color,fadeColor, 0.15);
+}
+
+/**
+ * 胶片曲线滤镜（调整对比度）
+ * @param color 输入颜色
+ * @return 胶片曲线颜色
+ */
+vec3 filmCurve(vec3 color){
+    vec3 x = color * 1.2;// 提亮图像
+    // sigmoid 函数  = sigmoid(t) = 1 / (1 + exp(-t));
+    vec3 curve = x * (1.0 / (1.0 + exp(-5.0 * (x-0.5)))); 
+    return mix(color , curve, 0.7);
+}
+
+/**
+ * 胶片颜色分级滤镜  橙青风格
+ * @param color 输入颜色
+ * @return 胶片颜色分级颜色
+ */
+vec3 filmColorGrade(vec3 color){
+    vec3 shadows = vec3(0.1,0.25,0.3); /// 青
+    vec3 midtones = vec3(0.70,0.50,0.3); /// 橙
+
+    float luminance = dot(color,vec3(0.2126, 0.7152, 0.0722)); // 亮度
+    // 混合色调
+    vec3 graded = mix(shadows,midtones,smoothstep(0.2,0.8,luminance));
+    // 混合原始色
+    return mix(color, graded * color,0.4);
+}

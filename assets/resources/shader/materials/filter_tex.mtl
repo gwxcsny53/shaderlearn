@@ -8,10 +8,11 @@
     "__uuid__": "30469e52-1637-4716-833a-22153c932042",
     "__expectedType__": "cc.EffectAsset"
   },
-  "_techIdx": 6,
+  "_techIdx": 9,
   "_defines": [
     {
-      "USE_LOCAL": true
+      "USE_CYBERPUNK": true,
+      "USE_DUOTONE": true
     }
   ],
   "_states": [
@@ -26,6 +27,8 @@
     }
   ],
   "_props": [
-    {}
+    {
+      "timeFactor": 1
+    }
   ]
 }
