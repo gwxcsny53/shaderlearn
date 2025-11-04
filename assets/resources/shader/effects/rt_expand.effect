@@ -1,0 +1,54 @@
+CCEffect %{
+common-pass-config: &common-pass-config
+  depthStencilState:
+    depthTest: false
+    depthWrite: false
+  properties:
+    bgTexture: { value: grey }
+
+techniques:
+  - name: rt01
+    passes:
+      - vert: vs:vert
+        frag: rt01-fs:frag
+        <<: *common-pass-config
+
+}%
+
+CCProgram vs %{
+precision highp float;
+#include <builtin/uniforms/cc-global>
+#include <common/common-define>
+in vec3 a_position;
+in vec2 a_texCoord; // 内置纹理坐标变量
+out vec2 uv0;
+
+vec4 vert() {
+  vec4 pos = vec4(a_position, 1.0);
+  
+  pos = cc_matViewProj * pos;
+  uv0 = a_texCoord;
+  
+  // 解决不同平台和渲染管线中 RenderTexture 的坐标系差异，可处理 RenderTexture 采样时的 UV 坐标翻转问题     
+  uv0 = CC_HANDLE_RT_SAMPLE_FLIP(uv0);
+  
+  return pos;
+}
+}%
+
+CCProgram rt01-fs %{
+precision highp float;
+#include <builtin/internal/sprite-texture>
+in vec2 uv0;
+uniform sampler2D bgTexture;
+
+vec4 frag() {
+  // 前景色     
+  vec4 color = texture(cc_spriteTexture, uv0);
+  
+  // 背景色     
+  vec4 baseColor = texture(bgTexture, uv0);
+  
+  return baseColor;
+}
+}%
