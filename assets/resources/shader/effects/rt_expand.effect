@@ -3,7 +3,7 @@ common-pass-config: &common-pass-config
   depthStencilState:
     depthTest: false
     depthWrite: false
-  properties:
+  properties: &common-properties
     bgTexture: { value: grey }
 
 techniques:
@@ -12,43 +12,218 @@ techniques:
       - vert: vs:vert
         frag: rt01-fs:frag
         <<: *common-pass-config
+        properties: 
+         <<: *common-properties
 
+  - name: rt_setVs
+    passes:
+      - vert: rtset-vs:vert
+        frag: rt02-fs:frag
+        <<: *common-pass-config
+        properties: 
+         <<: *common-properties
+         offsetX: {value: 0.0}
+         offsetY: {value: 0.0}
+
+  - name: darken-lighten
+    passes:
+      - vert: rtset-vs:vert
+        frag: darken-lighten-fs:frag
+        <<: *common-pass-config
+        properties: 
+         <<: *common-properties
+         offsetX: {value: 0.0}
+         offsetY: {value: 0.0}
+
+  - name: rt-more
+    passes:
+      - vert: rtmore-vs:vert
+        frag: rtmore-fs:frag
+        <<: *common-pass-config
+        properties: 
+         <<: *common-properties
+         offsetX: {value: 0.0}
+         offsetY: {value: 0.0}
 }%
+
+
+/// ########## vs ########### ///
 
 CCProgram vs %{
-precision highp float;
-#include <builtin/uniforms/cc-global>
-#include <common/common-define>
-in vec3 a_position;
-in vec2 a_texCoord; // 内置纹理坐标变量
-out vec2 uv0;
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <common/common-define>
+  in vec3 a_position;
+  in vec2 a_texCoord; // 内置纹理坐标变量
+  out vec2 uv0; 
 
-vec4 vert() {
-  vec4 pos = vec4(a_position, 1.0);
-  
-  pos = cc_matViewProj * pos;
-  uv0 = a_texCoord;
-  
-  // 解决不同平台和渲染管线中 RenderTexture 的坐标系差异，可处理 RenderTexture 采样时的 UV 坐标翻转问题     
-  uv0 = CC_HANDLE_RT_SAMPLE_FLIP(uv0);
-  
-  return pos;
+  vec4 vert() {
+    vec4 pos = vec4(a_position, 1.0);
+
+    pos = cc_matViewProj * pos;
+    uv0 = a_texCoord;
+
+    // 解决不同平台和渲染管线中 RenderTexture 的坐标系差异，可处理 RenderTexture 采样时的 UV 坐标翻转问题     
+    uv0 = CC_HANDLE_RT_SAMPLE_FLIP(uv0);
+
+    return pos;
 }
 }%
 
-CCProgram rt01-fs %{
-precision highp float;
-#include <builtin/internal/sprite-texture>
-in vec2 uv0;
-uniform sampler2D bgTexture;
+CCProgram rtset-vs %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <common/common-define>
+  in vec3 a_position;
+  in vec2 a_texCoord; // 内置纹理坐标变量
+  out vec2 uv0;
+  out vec2 bgUv;
 
-vec4 frag() {
-  // 前景色     
-  vec4 color = texture(cc_spriteTexture, uv0);
+  uniform UBO {
+    float offsetX;
+    float offsetY;
+  };
+
+  vec4 vert() {
+    vec4 pos = vec4(a_position, 1.0);
+
+    pos = cc_matViewProj * pos;
+    uv0 = a_texCoord;
+
+    float bgx = (uv0.x * 250.0 + offsetX) / 1280.0;
+    float bgy = (uv0.y * 250.0 + offsetY) / 720.0;
+    bgUv = vec2(bgx, bgy);
+
+    // 解决不同平台和渲染管线中 RenderTexture 的坐标系差异，可处理 RenderTexture 采样时的 UV 坐标翻转问题     
+    bgUv = CC_HANDLE_RT_SAMPLE_FLIP(bgUv);
+    // uv0 = CC_HANDLE_RT_SAMPLE_FLIP(uv0);
+
+    return pos;
+  }
+}%
+
+
+CCProgram rtmore-vs %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <common/common-define>
+
+  in vec3 a_posotion;
+  in vec2 a_texCoord; // 内置纹理坐标变量
   
-  // 背景色     
-  vec4 baseColor = texture(bgTexture, uv0);
-  
-  return baseColor;
-}
+  out vec2 uv0;
+  out vec2 bgUv;
+
+  uniform UBO{
+    float offsetX;
+    float offsetY;
+  }
+
+  vec4 vert(){
+    vec4 pos= vec4(a_position,1.0);
+    pos = cc_matViewProj * pos;
+    uv0 = a_texCoord;
+
+    float bgx= (uv0.x * 250.0 + offsetX) / 1280.0;
+    float bgy=(uv0.y * 250.0 + offsetY) / 720.0;
+    bgUv= vec2(bgx,bgy);
+
+    bgUv = CC_HANDLE_RT_SAMPLE_FLIP(bgUv);
+
+    return pos;
+  }
+}%
+
+
+/// ########## fs ########### ///
+
+CCProgram rt01-fs %{
+  precision highp float;
+  #include <builtin/internal/sprite-texture>
+  in vec2 uv0;
+  uniform sampler2D bgTexture;
+
+  vec4 frag() {
+    // 前景色     
+    vec4 color = texture(cc_spriteTexture, uv0);
+
+    // 背景色     
+    vec4 baseColor = texture(bgTexture, uv0);
+
+    return baseColor;
+  }
+}%
+
+
+CCProgram rt02-fs %{
+  precision highp float;
+  #include <builtin/internal/sprite-texture>
+
+  in vec2 uv0;
+  in vec2 bgUv;
+
+  uniform sampler2D bgTexture;
+
+  vec4 frag(){
+    vec4 color = texture(cc_spriteTexture, uv0);
+
+    vec4 baseColor = texture(bgTexture, bgUv);
+
+    return baseColor;
+  }
+}%
+
+
+CCProgram darken-lighten-fs %{
+  precision highp float;
+  #include <builtin/internal/sprite-texture>
+
+  in vec2 uv0;
+  in vec2 bgUv;
+
+  uniform sampler2D bgTexture;
+
+  /// 变暗 只保留最暗的部分
+  /// base 背景色 blend 前景色
+  vec3 blendDarken(vec3 base,vec3 blend){
+    return min(base,blend);
+  }
+  // 变量，只保留最亮的部分
+  vec3 blendLighten(vec3 base ,vec3 blend){
+    return max( base ,blend );
+  }
+
+
+  vec4 frag(){
+    /// 前景色
+    vec4 blendColor = texture(cc_spriteTexture, uv0);
+    /// 背景色
+    vec4 baseColor = texture(bgTexture, bgUv);
+
+    vec3 color = vec3(1.0);
+
+    #if USE_LIGHTEN
+      color = blendLighten(baseColor.rgb,blendColor.rgb);
+    #elif USE_DARKEN
+      color = blendDarken(baseColor.rgb,blendColor.rgb);
+    #endif
+
+    return vec4(color,baseColor.a);
+  }
+}%
+
+CCProgram rtmore-fs %{
+  precision highp float;
+  #include <builtin/internal/sprite-texture>
+
+  in vec2 uv0;
+  in vec2 bgUv;
+
+  uniform sampler2D bgTexture;
+
+  vec4 frag {
+    vec4 blendColor = texture(cc_spriteTexture,uv0);
+    vec4 baseColor = texture(bgTexture,bgUv);
+    return baseColor;
+  }
 }%

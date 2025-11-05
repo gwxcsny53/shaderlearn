@@ -8,9 +8,11 @@
     "__uuid__": "ee51a1e3-7244-4608-abdf-9ae806b7f959",
     "__expectedType__": "cc.EffectAsset"
   },
-  "_techIdx": 0,
+  "_techIdx": 2,
   "_defines": [
-    {}
+    {
+      "USE_LIGHTEN": true
+    }
   ],
   "_states": [
     {
