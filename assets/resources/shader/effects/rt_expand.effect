@@ -108,7 +108,7 @@ CCProgram rtmore-vs %{
   #include <builtin/uniforms/cc-global>
   #include <common/common-define>
 
-  in vec3 a_posotion;
+  in vec3 a_position;
   in vec2 a_texCoord; // 内置纹理坐标变量
   
   out vec2 uv0;
@@ -117,7 +117,7 @@ CCProgram rtmore-vs %{
   uniform UBO{
     float offsetX;
     float offsetY;
-  }
+  };
 
   vec4 vert(){
     vec4 pos= vec4(a_position,1.0);
@@ -221,7 +221,7 @@ CCProgram rtmore-fs %{
 
   uniform sampler2D bgTexture;
 
-  vec4 frag {
+  vec4 frag(){
     vec4 blendColor = texture(cc_spriteTexture,uv0);
     vec4 baseColor = texture(bgTexture,bgUv);
     return baseColor;

@@ -1,0 +1,33 @@
+
+
+/**
+ * 计算颜色的亮度值
+ * @param color 输入颜色
+ * @return 亮度值
+ */
+float luminance(vec3 color){
+    return dot(color, vec3(0.299, 0.587, 0.114));
+}
+
+/**
+ * 设置颜色的亮度值
+ * @param color 输入颜色
+ * @param l 目标亮度值
+ * @return 调整后的颜色
+ */
+vec3 setLuminance(vec3 color , float l){
+    float diff = l - luminance(color);
+    return color + diff;
+}
+
+/**
+ * 设置颜色的饱和度值
+ * @param color 输入颜色
+ * @param saturation 目标饱和度值
+ * @return 调整后的颜色
+ */
+vec3 setSaturation(vec3 color, float saturation){
+    float l = luminance(color);
+    vec3 grey = vec3(l);
+    return mix(grey,color,saturation);
+}
