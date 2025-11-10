@@ -215,6 +215,7 @@ CCProgram darken-lighten-fs %{
 CCProgram rtmore-fs %{
   precision highp float;
   #include <builtin/internal/sprite-texture>
+  #include "../chunks/color/color-adjust.chunk"
 
   in vec2 uv0;
   in vec2 bgUv;
@@ -222,8 +223,44 @@ CCProgram rtmore-fs %{
   uniform sampler2D bgTexture;
 
   vec4 frag(){
+    /// 前景色
     vec4 blendColor = texture(cc_spriteTexture,uv0);
+    /// 背景色
     vec4 baseColor = texture(bgTexture,bgUv);
-    return baseColor;
+
+    vec3 color = vec3(1.0);
+    vec3 base = baseColor.rgb;
+    vec3 blend = blendColor.rgb;
+    #if USE_DARKEN
+      color = blendDarken(base,blend);
+    #elif USE_LIGHTEN
+      color = blendLighten(base , blend);
+    #elif USE_OVERLAY
+      color = blendOverlay(base,blend);  
+    #elif USE_COLOR_DODGE
+      color = blendColorDodge(base, blend);
+    #elif USE_COLOR_BURN
+      color = blendColorBurn(base, blend);
+    #elif USE_HARD_LIGHT
+      color = blendHardLight(base, blend);
+    #elif USE_SOFT_LIGHT        
+      color = blendSoftLight(base, blend , blendColor.a);
+    #elif USE_DIFFERENCE
+      color = blendDifference(base, blend);
+    #elif USE_EXCLUSION
+      color = blendExclusion(base, blend);
+    #elif USE_HUE
+      color = blendHue(base, blend);
+    #elif USE_SATURATION
+      color = blendSaturation(base, blend);
+    #elif USE_COLOR1
+      color = blendColor1(base, blend);
+    #elif USE_LUMINANCE
+      color = blendLuminosity(base, blend);
+    #endif
+
+
+
+    return vec4(color,blendColor.a);
   }
 }%

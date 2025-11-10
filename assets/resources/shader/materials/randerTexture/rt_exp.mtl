@@ -10,7 +10,9 @@
   },
   "_techIdx": 3,
   "_defines": [
-    {}
+    {
+      "USE_HUE": true
+    }
   ],
   "_states": [
     {

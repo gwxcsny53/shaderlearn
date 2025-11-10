@@ -1,4 +1,4 @@
-
+const float EPSILON = 0.00001;
 
 /**
  * 计算颜色的亮度值
@@ -20,6 +20,16 @@ vec3 setLuminance(vec3 color , float l){
     return color + diff;
 }
 
+
+/**
+ * 计算颜色的饱和度值
+ * @param color 输入颜色
+ * @return 饱和度值
+ */
+float saturation(vec3 color){
+    return max(max(color.r,color.g),color.b) - min(min(color.r,color.g),color.b);
+}
+
 /**
  * 设置颜色的饱和度值
  * @param color 输入颜色
@@ -30,4 +40,138 @@ vec3 setSaturation(vec3 color, float saturation){
     float l = luminance(color);
     vec3 grey = vec3(l);
     return mix(grey,color,saturation);
+}
+
+
+
+/// 变暗 只保留最暗的部分
+/// base 背景色 blend 前景色
+vec3 blendDarken(vec3 base,vec3 blend){
+    return min(base,blend);
+}
+// 变量，只保留最亮的部分
+vec3 blendLighten(vec3 base ,vec3 blend){
+    return max(base,blend);
+}
+
+/**
+ * 叠加混合模式
+ * @param base 基础颜色
+ * @param blend 混合颜色
+ * @return 混合后的颜色
+ */
+vec3 blendOverlay(vec3 base,vec3 blend){
+    return mix(2.0*base * blend, 1.0 - 2.0 *(1.0-base) * (1.0-blend),step(0.5,base));
+}
+
+/**
+ * 颜色减淡混合模式
+ * @param base 基础颜色
+ * @param blend 混合颜色
+ * @return 混合后的颜色
+ */
+vec3 blendColorDodge(vec3 base , vec3 blend){
+    return base / max(vec3(EPSILON),1.0-blend);
+}
+
+
+/**
+ * 颜色加深混合模式
+ * @param base 基础颜色
+ * @param blend 混合颜色
+ * @return 混合后的颜色
+ */
+vec3 blendColorBurn(vec3 base ,vec3 blend){
+    return 1.0 - (1.0 -base ) / max(vec3(EPSILON),blend);
+} 
+
+/**
+ * 强光混合模式
+ * @param base 基础颜色
+ * @param blend 混合颜色
+ * @return 混合后的颜色
+ */
+vec3 blendHardLight(vec3 base, vec3 blend){
+    return mix(blendColorDodge(base,blend),blendColorBurn(base,blend),step(0.5,base));
+}
+
+
+/**
+ * 柔光混合模式
+ * @param base 基础颜色
+ * @param blend 混合颜色
+ * @return 混合后的颜色
+ */
+vec3 blendSoftLight(vec3 base ,vec3 blend, float alphy){
+    // ps soft light 每通道分段
+    vec3 A = base - (1.0 - 2.0 * blend.rgb) * base * (1.0 - base);
+
+    vec3 usePoly = step(base ,vec3(0.25)); 
+    vec3 Gpoly = ((vec3(16.0) * base - vec3(12.0)) * base + vec3(4.0)) * base;
+    vec3 G = usePoly * Gpoly + (vec3(1.0) - usePoly) * sqrt(base);
+
+    vec3 B = base + (2.0 * blend.rgb - 1.0) * (G - base);
+
+    vec3 soft = mix(A,B,step(vec3(0.5) , blend.rgb));
+
+    return mix(base, soft , clamp(alphy,0.0,1.0));
+}
+
+/**
+ * 差值混合模式
+ * @param base 基础颜色
+ * @param blend 混合颜色
+ * @return 混合后的颜色
+ */
+vec3 blendDifference(vec3 base,vec3 blend){
+    return abs(base - blend);
+}
+
+/**
+ * 排除混合模式
+ * @param base 基础颜色
+ * @param blend 混合颜色
+ * @return 混合后的颜色
+ */
+vec3 blendExclusion(vec3 base, vec3 blend){
+    return base + blend - 2.0 * base * blend;
+}
+
+/**
+ * 色相混合模式
+ * @param base 基础颜色
+ * @param blend 混合颜色
+ * @return 混合后的颜色
+ */
+vec3 blendHue(vec3 base ,vec3 blend){
+    float sat = saturation(base);
+    float lum = luminance(base);
+    return setLuminance(setSaturation(blend,sat),lum);
+}
+
+/**
+ * 饱和度混合模式
+ * @param base 基础颜色
+ * @param blend 混合颜色
+ * @return 混合后的颜色
+ */
+vec3 blendSaturation(vec3 base , vec3 blend){
+    float sat = saturation(blend);
+    float lum = luminance(base);
+    return setLuminance(setSaturation(base,sat),lum);
+}
+
+
+vec3 blendColor1(vec3 base, vec3 blend){
+    return setLuminance(blend, luminance(base));
+}
+
+/**
+ * 亮度混合模式
+ * @param base 基础颜色
+ * @param blend 混合颜色
+ * @return 混合后的颜色
+ */
+vec3 blendLuminosity(vec3 base , vec3 blend){
+    return setLuminance(base, luminance(blend));
 }
