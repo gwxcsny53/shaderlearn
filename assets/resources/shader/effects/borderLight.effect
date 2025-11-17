@@ -1,0 +1,213 @@
+CCEffect %{
+common-pass-config: &common-pass-config
+  blendState:
+    targets:
+      - blend: true
+        blendSrc: src_alpha
+        blendDst: one_minus_src_alpha
+  depthStencilState:
+    depthTest: false
+    depthWrite: false
+  rasterizerState:
+    cullMode: none
+  properties: &common-properties
+    glowColor: { value: [1.0, 1.0, 1.0, 1.0], editor: { type: color } }
+    glowSpread: { value: 0.04, editor: { range: [0.0, 0.2, 0.0005] } }
+    textureAspect: { value: [1.0, 1.0], editor: { type: vector } }
+
+techniques:
+  - name: borderlight01
+    passes:
+      - vert: general-vs:vert
+        frag: borderLight01-fs:frag
+        <<: *common-pass-config
+        properties:
+          <<: *common-properties
+
+  - name: borderlightRT
+    passes:
+      - vert: rt-vs:vert
+        frag: borderLightRT-fs:frag
+        <<: *common-pass-config
+        properties:
+          <<: *common-properties
+          renderTexture: { value: grey }
+
+}%
+
+CCProgram general-vs %{
+  #include "../chunks/normal-vert.chunk"
+}%
+
+CCProgram rt-vs %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <common/common-define>
+  #if USE_LOCAL // 如果是本地坐标,模型空间坐标 ,引入 cc_matWorld 变量 ,(通常为spine动画)
+    #include <builtin/uniforms/cc-local>
+  #endif
+
+  in vec3 a_position;
+  in vec2 a_texCoord;
+  out vec2 uv0;
+
+  #if USE_LOCAL
+    in vec4 a_color; // cocos 内置的顶点颜色变量 ,spine 中有些渲染是基于顶点染色形式 ,a_color 可以获取顶点颜色
+    out vec4 v_color; // 输出给片元着色器
+  #endif
+
+  vec4 vert() {
+    vec4 pos = vec4(a_position, 1.0);
+    
+    #if USE_LOCAL
+      pos = cc_matWorld * pos; // 本地坐标需要乘 cc_matWorld 矩阵,转换到世界坐标
+      v_color = a_color; // 传递顶点颜色
+    #endif
+    
+    pos = cc_matViewProj * pos;
+    uv0 = a_texCoord;
+    
+    uv0 = CC_HANDLE_RT_SAMPLE_FLIP(uv0);
+    
+    return pos;
+    
+  }
+}%
+
+CCProgram borderLight01-fs %{
+  precision highp float;
+  #include <builtin/internal/sprite-texture>
+
+  in vec2 uv0;
+  #if USE_LOCAL
+    in vec4 v_color;
+  #endif
+
+  uniform UBO {
+    vec4 glowColor; /// 发光颜色
+    vec2 textureAspect; /// 偏移量
+    float glowSpread; /// 最大发光半径
+  };
+
+  // ---------- 搜索最近实心像素 ----------                                              
+  float getMinDist(vec2 uv) {
+    const int DIR_COUNT = 12; // 当前像素向四周发射向量的数量
+    const int STEP_COUNT = 20;
+    float stepSize = glowSpread / float(STEP_COUNT); // 探测的每一步的步长
+    float minDist = glowSpread; // 最近实心像素的距离,初始化为描边尺寸（即最大距离）
+    
+    for(int dir = 0; dir < DIR_COUNT; dir ++ ) {
+      float angle2 = float(dir) / float(DIR_COUNT) * 6.2831853; // 当前向量角度，其中 6.2831853 表示 2π
+      float angle1 = 6.2831853 * float(dir) / float(DIR_COUNT);
+      vec2 dirVec = vec2(cos(angle1), sin(angle1)); //当前向量
+      
+      for(int s = 1; s <= STEP_COUNT; s ++ ) {
+        float dist = float(s) * stepSize; // 从中心到当前采样点的总距离（基于 uv 坐标体系）
+        // vec2 offset = dirVec * dist // 从中心到当前采样点的偏移量                        
+        vec2 offset = dirVec * dist / textureAspect; // 从中心到当前采样点的偏移量
+        float a = texture(cc_spriteTexture, uv + offset).a; // 当前探测到的像素的alpha值
+        if (a > 0.5) {// 探测到了实心像素
+          minDist = min(minDist, dist);
+          break;
+        }
+      }
+    }
+    return minDist;
+  }
+
+  vec4 frag() {
+    vec4 color = texture(cc_spriteTexture, uv0);
+    
+    #if USE_LOCAL
+      color *= v_color;
+    #endif
+    
+    if (color.a > 0.5) {
+      return color;
+    }
+    
+    float minDist = getMinDist(uv0);
+    
+    #if USE_GLOW_DECAY
+      float glowFactor = 1.0 - smoothstep(0.0, glowSpread, minDist);
+      color = glowColor * glowFactor;
+    #else
+      if (minDist < glowSpread) {
+        color = glowColor;
+      }
+    #endif
+    
+    return color;
+  }
+}%
+
+
+CCProgram borderLightRT-fs %{
+  precision highp float;
+  #include <builtin/internal/sprite-texture>
+
+  in vec2 uv0;
+  #if USE_LOCAL
+    in vec4 v_color;
+  #endif
+
+  uniform sampler2D renderTexture;
+
+  uniform UBO {
+    vec4 glowColor; /// 发光颜色
+    vec2 textureAspect; /// 偏移量
+    float glowSpread; /// 最大发光半径
+  };
+
+  // ---------- 搜索最近实心像素 ----------                                              
+  float getMinDist(vec2 uv) {
+    const int DIR_COUNT = 12; // 当前像素向四周发射向量的数量
+    const int STEP_COUNT = 20;
+    float stepSize = glowSpread / float(STEP_COUNT); // 探测的每一步的步长
+    float minDist = glowSpread; // 最近实心像素的距离,初始化为描边尺寸（即最大距离）
+    
+    for(int dir = 0; dir < DIR_COUNT; dir ++ ) {
+      float angle2 = float(dir) / float(DIR_COUNT) * 6.2831853; // 当前向量角度，其中 6.2831853 表示 2π
+      float angle1 = 6.2831853 * float(dir) / float(DIR_COUNT);
+      vec2 dirVec = vec2(cos(angle1), sin(angle1)); //当前向量
+      
+      for(int s = 1; s <= STEP_COUNT; s ++ ) {
+        float dist = float(s) * stepSize; // 从中心到当前采样点的总距离（基于 uv 坐标体系）
+        // vec2 offset = dirVec * dist // 从中心到当前采样点的偏移量                        
+        vec2 offset = dirVec * dist / textureAspect; // 从中心到当前采样点的偏移量
+        float a = texture(renderTexture, uv + offset).a; // 当前探测到的像素的alpha值
+        if (a > 0.5) {// 探测到了实心像素
+          minDist = min(minDist, dist);
+          break;
+        }
+      }
+    }
+    return minDist;
+  }
+
+  vec4 frag() {
+    vec4 color = texture(renderTexture, uv0);
+    
+    #if USE_LOCAL
+      color *= v_color;
+    #endif
+    
+    if (color.a > 0.5) {
+      return color;
+    }
+    
+    float minDist = getMinDist(uv0);
+    
+    #if USE_GLOW_DECAY
+      float glowFactor = 1.0 - smoothstep(0.0, glowSpread, minDist);
+      color = glowColor * glowFactor;
+    #else
+      if (minDist < glowSpread) {
+        color = glowColor;
+      }
+    #endif
+    
+    return color;
+  }
+
+}%
