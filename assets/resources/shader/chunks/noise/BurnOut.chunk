@@ -1,0 +1,83 @@
+
+/*
+ * @Description: 燃烧消散效果库 - 实现角色死亡时的燃烧消失动画
+ * @Usage: 被spine-dead.effect引用，用于角色死亡时的燃烧消散特效
+ * @Author: iwae
+ * @Note: 使用噪声函数生成火焰纹理，配合渐变实现逼真的燃烧效果
+ */
+
+/**
+ * 伪随机函数 - 生成基于坐标的随机值
+ * @param c 输入坐标
+ * @param seed 随机种子
+ * @return 0-1之间的伪随机值
+ * @usage: 作为噪声生成的基础函数
+ */
+float fr(vec2 c, float seed) 
+{
+return fract(43.0 * sin(c.x + 7.0 * c.y) * seed);
+}
+
+/**
+ * 平滑噪声函数 - 生成连续的噪声值
+ * @param p 输入坐标
+ * @param seed 随机种子
+ * @return 平滑的噪声值
+ * @usage: 用于生成火焰的基础纹理
+ */
+float fn(vec2 p, float seed)
+{
+    vec2 i = floor(p), w = p - i, j = vec2(1.0, 0.0);
+    // 使用平滑插值函数
+    w = w * w * (3.0 - w - w);
+    return mix(mix(fr(i, seed), fr(i + j, seed), w.x), mix(fr(i + j.yx, seed), fr(i + 1.0, seed), w.x), w.y);
+}
+
+/**
+ * 分形噪声函数 - 生成多层次的复杂噪声
+ * @param p 输入坐标
+ * @param seed 随机种子
+ * @return 分形噪声值
+ * @usage: 创建火焰的复杂纹理，模拟真实火焰的不规则形状
+ */
+float fa(vec2 p, float seed) 
+{
+    float m = 0.0, f = 2.0;
+    // 叠加6层不同频率的噪声
+    for (int i = 0; i < 6; i++) {
+    m += fn(f * p, seed) / f; 
+    f += f; // 每层频率翻倍
+    }
+    return m;
+}
+
+/**
+ * 燃烧消散主效果函数
+ * @param MainColor 原始颜色
+ * @param uv 纹理坐标
+ * @param progression 燃烧进度 (0.0=未燃烧, 1.0=完全燃烧)
+ * @return 燃烧效果后的颜色
+ * @usage: 在角色死亡动画中调用，创建从下到上的燃烧消散效果
+ */
+vec4 BurnOut(vec4 MainColor, vec2 uv, float progression) 
+{
+    // 时间参数，避免除零错误
+    float t = fract(progression * 0.9999);
+    
+    // 生成燃烧边界，使用噪声创建不规则的燃烧线
+    float cc = smoothstep(t / 1.2, t + 0.1, fa(3.5 * uv, 1.));
+    vec4 c = vec4(cc);
+    
+    // 应用原始颜色
+    c = MainColor * c;
+    
+    // 根据燃烧进度调整颜色通道，创建火焰颜色效果
+    // 红色通道：最强烈的火焰效果
+    c.r = mix(c.r, c.r * 15.0 * (1.0 - c.a) * 8.0, progression);
+    // 绿色通道：中等强度
+    c.g = mix(c.g, c.g * 10.0 * (1.0 - c.a) * 4.0, progression);
+    // 蓝色通道：最弱，保持火焰的橙红色调
+    c.b = mix(c.b, c.b * 5.0 * (1.0 - c.a), progression);
+    
+    return vec4(c.rgb, c.a);
+}

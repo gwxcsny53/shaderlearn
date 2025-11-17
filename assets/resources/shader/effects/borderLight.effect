@@ -89,7 +89,7 @@ CCProgram borderLight01-fs %{
     float glowSpread; /// 最大发光半径
   };
 
-  // ---------- 搜索最近实心像素 ----------                                              
+  // ---------- 搜索最近实心像素 ----------                                               
   float getMinDist(vec2 uv) {
     const int DIR_COUNT = 12; // 当前像素向四周发射向量的数量
     const int STEP_COUNT = 20;
@@ -103,7 +103,7 @@ CCProgram borderLight01-fs %{
       
       for(int s = 1; s <= STEP_COUNT; s ++ ) {
         float dist = float(s) * stepSize; // 从中心到当前采样点的总距离（基于 uv 坐标体系）
-        // vec2 offset = dirVec * dist // 从中心到当前采样点的偏移量                        
+        // vec2 offset = dirVec * dist // 从中心到当前采样点的偏移量                         
         vec2 offset = dirVec * dist / textureAspect; // 从中心到当前采样点的偏移量
         float a = texture(cc_spriteTexture, uv + offset).a; // 当前探测到的像素的alpha值
         if (a > 0.5) {// 探测到了实心像素
@@ -159,7 +159,7 @@ CCProgram borderLightRT-fs %{
     float glowSpread; /// 最大发光半径
   };
 
-  // ---------- 搜索最近实心像素 ----------                                              
+  // ---------- 搜索最近实心像素 ----------                                               
   float getMinDist(vec2 uv) {
     const int DIR_COUNT = 12; // 当前像素向四周发射向量的数量
     const int STEP_COUNT = 20;
@@ -173,7 +173,7 @@ CCProgram borderLightRT-fs %{
       
       for(int s = 1; s <= STEP_COUNT; s ++ ) {
         float dist = float(s) * stepSize; // 从中心到当前采样点的总距离（基于 uv 坐标体系）
-        // vec2 offset = dirVec * dist // 从中心到当前采样点的偏移量                        
+        // vec2 offset = dirVec * dist // 从中心到当前采样点的偏移量                         
         vec2 offset = dirVec * dist / textureAspect; // 从中心到当前采样点的偏移量
         float a = texture(renderTexture, uv + offset).a; // 当前探测到的像素的alpha值
         if (a > 0.5) {// 探测到了实心像素
