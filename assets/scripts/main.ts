@@ -12,10 +12,17 @@ export class main extends Component {
     @property(Node)
     borderLightNode: Node = null;
 
+    @property(Node)
+    dissolveTexture: Node = null;
+
+    @property(Node)
+    dissolveSpine: Node = null;
+
     start() {
         this.setRTOffset();
         this.tweBg();
         this.setBorderLight();
+        this.setDissolveTexture();
     }
 
     private tweBg() {
@@ -45,6 +52,52 @@ export class main extends Component {
 
         material.setProperty('offsetX', worldPos.x - halfX);
         material.setProperty('offsetY', 720 - worldPos.y - halfY);
+    }
+
+    setDissolveTexture() {
+        const material = this.dissolveTexture.getComponent(Sprite).material;
+        const property = material.getProperty('dissolveThreshold');
+        let d = {
+            dissolveThreshold: property,
+        };
+        let target = 0;
+        if (property == 0.0) {
+            target = 1.0;
+        }
+        tween(d)
+            .to(
+                1.0,
+                { dissolveThreshold: target },
+                {
+                    onUpdate: (target: { dissolveThreshold: number }, ratio: number) => {
+                        material.setProperty('dissolveThreshold', target.dissolveThreshold);
+                    },
+                }
+            )
+            .start();
+    }
+
+    setDissolveSpine() {
+        const material = this.dissolveSpine.getComponent(Sprite).material;
+        const property = material.getProperty('dissolveThreshold');
+        let d = {
+            dissolveThreshold: property,
+        };
+        let target = 0;
+        if (property == 0.0) {
+            target = 1.0;
+        }
+        tween(d)
+            .to(
+                1.0,
+                { dissolveThreshold: target },
+                {
+                    onUpdate: (target: { dissolveThreshold: number }, ratio: number) => {
+                        material.setProperty('dissolveThreshold', target.dissolveThreshold);
+                    },
+                }
+            )
+            .start();
     }
 
     update(deltaTime: number) {}

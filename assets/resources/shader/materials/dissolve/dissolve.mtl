@@ -10,9 +10,7 @@
   },
   "_techIdx": 0,
   "_defines": [
-    {
-      "USE_TEXTURE": true
-    }
+    {}
   ],
   "_states": [
     {
@@ -27,7 +25,18 @@
   ],
   "_props": [
     {
-      "dissolveThreshold": 0
+      "dissolve": {
+        "__uuid__": "aeedf272-2d74-47ed-b2d8-bbe3d3efb21d@6c48a",
+        "__expectedType__": "cc.Texture2D"
+      },
+      "dissolveThreshold": 0,
+      "dissolveColor": {
+        "__type__": "cc.Color",
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      }
     }
   ]
 }
