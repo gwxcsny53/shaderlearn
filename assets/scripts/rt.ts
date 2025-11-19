@@ -1,28 +1,20 @@
 import { _decorator, Component, Node, sp, Sprite, tween, UITransform, Vec2, Vec3 } from 'cc';
 const { ccclass, property } = _decorator;
 
-@ccclass('main')
-export class main extends Component {
+@ccclass('rt')
+export class rt extends Component {
     @property(Node)
     bg: Node = null;
-
-    @property(Node)
-    rtnode: Node = null;
 
     @property(Node)
     borderLightNode: Node = null;
 
     @property(Node)
-    dissolveTexture: Node = null;
-
-    @property(Node)
     dissolveSpine: Node = null;
 
     start() {
-        this.setRTOffset();
         this.tweBg();
         this.setBorderLight();
-        this.setDissolveTexture();
         this.setDissolveSpine();
     }
 
@@ -41,41 +33,6 @@ export class main extends Component {
         const textureWid = this.borderLightNode.getComponent(UITransform).width;
         const textureHeight = this.borderLightNode.getComponent(UITransform).height;
         material.setProperty('textureAspect', new Vec2(textureWid / textureHeight, 1.0));
-    }
-
-    setRTOffset() {
-        const size = this.rtnode.getComponent(UITransform).contentSize;
-        const halfX = size.width / 2;
-        const halfY = size.height / 2;
-
-        const material = this.rtnode.getComponent(Sprite).material;
-        const worldPos = this.rtnode.getWorldPosition();
-
-        material.setProperty('offsetX', worldPos.x - halfX);
-        material.setProperty('offsetY', 720 - worldPos.y - halfY);
-    }
-
-    setDissolveTexture() {
-        const material = this.dissolveTexture.getComponent(Sprite).material;
-        const property = material.getProperty('dissolveThreshold');
-        let d = {
-            dissolveThreshold: property,
-        };
-        let target = 0;
-        if (property == 0.0) {
-            target = 1.0;
-        }
-        tween(d)
-            .to(
-                1.0,
-                { dissolveThreshold: target },
-                {
-                    onUpdate: (target: { dissolveThreshold: number }, ratio: number) => {
-                        material.setProperty('dissolveThreshold', target.dissolveThreshold);
-                    },
-                }
-            )
-            .start();
     }
 
     setDissolveSpine() {
@@ -103,12 +60,12 @@ export class main extends Component {
                 { dissolveThreshold: target },
                 {
                     onUpdate: (target: { dissolveThreshold: number }, ratio: number) => {
-                        let matCaches = spine['_materialCache'];
-                        for (var x in matCaches) {
-                            let m = matCaches[x];
-                            m.setProperty('dissolveThreshold', target.dissolveThreshold);
-                        }
-                        material.setProperty('dissolveThreshold', target.dissolveThreshold);
+                        // let matCaches = spine['_materialCache'];
+                        // for (var x in matCaches) {
+                        //     let m = matCaches[x];
+                        //     m.setProperty('dissolveThreshold', target.dissolveThreshold);
+                        // }
+                        // material.setProperty('dissolveThreshold', target.dissolveThreshold);
                     },
                 }
             )

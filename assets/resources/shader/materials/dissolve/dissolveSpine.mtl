@@ -8,11 +8,9 @@
     "__uuid__": "20038730-1f7d-4b38-a52c-c11c62ba5892",
     "__expectedType__": "cc.EffectAsset"
   },
-  "_techIdx": 0,
+  "_techIdx": 1,
   "_defines": [
-    {
-      "USE_LOCAL": true
-    }
+    {}
   ],
   "_states": [
     {
@@ -30,6 +28,18 @@
       "dissolve": {
         "__uuid__": "aeedf272-2d74-47ed-b2d8-bbe3d3efb21d@6c48a",
         "__expectedType__": "cc.Texture2D"
+      },
+      "dissolveThreshold": 0,
+      "dissolveColor": {
+        "__type__": "cc.Color",
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "renderTexture": {
+        "__uuid__": "604cffb7-9c65-4df5-a378-3b9b63a887f5",
+        "__expectedType__": "cc.RenderTexture"
       }
     }
   ]

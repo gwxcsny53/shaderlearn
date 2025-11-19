@@ -1,32 +1,45 @@
 CCEffect %{
+common-pass-config: &common-pass-config
+  blendState:
+    targets:
+      - blend: true
+        blendSrc: src_alpha
+        blendDst: one_minus_src_alpha
+  depthStencilState:
+    depthTest: false
+    depthWrite: false
+  rasterizerState:
+    cullMode: none
+  properties: &common-properties
+    dissolve: { value: grey, editor: { tooltip: "噪声贴图" } }
+    dissolveThreshold:
+      {
+        value: 0.5,
+        editor: { range: [0, 1, 0.01], slide: true, tooltip: "溶解阈值" },
+      }
+    dissolveColor:
+      {
+        value: [0.6, 0.2, 0.1, 1],
+        editor: { tooltip: "溶解颜色", type: color },
+      }
+
 techniques:
-  - passes:
+  - name: dissolve
+    passes:
       - vert: sprite-vs:vert
         frag: sprite-fs:frag
-        depthStencilState:
-          depthTest: false
-          depthWrite: false
-        blendState:
-          targets:
-            - blend: true
-              blendSrc: src_alpha
-              blendDst: one_minus_src_alpha
-              blendDstAlpha: one_minus_src_alpha
-        rasterizerState:
-          cullMode: none
-
+        <<: *common-pass-config
         properties:
-          dissolve: { value: grey, editor: { tooltip: "噪声贴图" } }
-          dissolveThreshold:
-            {
-              value: 0.5,
-              editor: { range: [0, 1, 0.01], slide: true, tooltip: "溶解阈值" },
-            }
-          dissolveColor:
-            {
-              value: [0.6, 0.2, 0.1, 1],
-              editor: { tooltip: "溶解颜色", type: color },
-            }
+          <<: *common-properties
+
+  - name: dissolveRt
+    passes:
+      - vert: dissolveRt-vs:vert
+        frag: dissolveRt-fs:frag
+        <<: *common-pass-config
+        properties:
+          <<: *common-properties
+          renderTexture: { value: grey } # 新增 renderTexture 材质参数
 
 }%
 
@@ -73,3 +86,80 @@ CCProgram sprite-fs %{
     return color;
   }
 }%
+
+CCProgram dissolveRt-vs %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <common/common-define>
+  #if USE_LOCAL // 如果是本地坐标,模型空间坐标 ,引入 cc_matWorld 变量 ,(通常为spine动画)
+    #include <builtin/uniforms/cc-local>
+  #endif
+
+  in vec3 a_position;
+  in vec2 a_texCoord;
+  out vec2 uv0;
+
+  #if USE_LOCAL
+    in vec4 a_color; // cocos 内置的顶点颜色变量 ,spine 中有些渲染是基于顶点染色形式 ,a_color 可以获取顶点颜色
+    out vec4 v_color; // 输出给片元着色器
+  #endif
+
+  vec4 vert() {
+    vec4 pos = vec4(a_position, 1.0);
+    
+    #if USE_LOCAL
+      pos = cc_matWorld * pos; // 本地坐标需要乘 cc_matWorld 矩阵,转换到世界坐标
+      v_color = a_color; // 传递顶点颜色
+    #endif
+    
+    pos = cc_matViewProj * pos;
+    uv0 = a_texCoord;
+    
+    uv0 = CC_HANDLE_RT_SAMPLE_FLIP(uv0);
+    
+    return pos;
+    
+  }
+}%
+
+CCProgram dissolveRt-fs %{
+  precision highp float;
+  #include <builtin/internal/sprite-texture>
+  in vec2 uv0;
+
+  #if USE_LOCAL
+    in vec4 v_color;
+  #endif
+
+  uniform sampler2D dissolve;
+  uniform sampler2D renderTexture;
+
+  uniform Dissolve {
+    vec4 dissolveColor;
+    float dissolveThreshold;
+  };
+
+  vec4 frag() {
+    vec4 dissolveMap = texture(dissolve, uv0);
+    float value = dissolveMap.r;
+    
+    if (value < dissolveThreshold) {
+      discard;
+    }
+    
+    vec4 color = texture(renderTexture, uv0);
+    #if USE_LOCAL
+      color *= v_color;
+    #endif
+    
+    if (color.a < 0.5) {
+      discard;
+    }
+    
+    if (dissolveThreshold > 0.0 && value < dissolveThreshold + 0.05) {
+      color = vec4(dissolveColor.rgb, color.a);
+    }
+    return color;
+  }
+}%
+
